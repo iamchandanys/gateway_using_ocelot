@@ -9,6 +9,8 @@ namespace Gateway
     {
         public string Secret { get; set; }
 
+        public string[] AllowedHosts { get; set; }
+
         public string[] WhitelistedUrls { get; set; }
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
@@ -58,23 +59,51 @@ namespace Gateway
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseCors(x => x
-                .AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .WithHeaders());
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
+            app.UseHttpsRedirection();
+
+            app.UseRouting();
 
             app.UseAuthentication();
 
+            app.UseAuthorization();
+
+            app.UseCors(builder =>
+            {
+                builder.AllowAnyHeader();
+                builder.AllowAnyMethod();
+                builder.AllowAnyOrigin();
+            });
+
             app.Use(async (ctx, next) =>
             {
-                if (ctx.User.Identity.IsAuthenticated
-                        || appSettings.WhitelistedUrls.Any(s => ctx.Request.Path.Value.Equals(s, StringComparison.InvariantCultureIgnoreCase)))
+                if (appSettings.AllowedHosts.Any(x => ctx.Request.Headers["Origin"].ToString().Equals(x, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    await next.Invoke();
+                    if (ctx.Request.IsHttps)
+                    {
+                        if (ctx.User.Identity.IsAuthenticated || appSettings.WhitelistedUrls.Any(s => ctx.Request.Path.Value.Equals(s, StringComparison.InvariantCultureIgnoreCase)))
+                        {
+                            await next.Invoke();
+                        }
+                        else
+                        {
+                            ctx.Response.StatusCode = 401;
+                            ctx.Response.Headers.Clear();
+                            ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                        }
+                    }
+                    else
+                    {
+                        ctx.Response.StatusCode = 401;
+                        ctx.Response.Headers.Clear();
+                        ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    }
                 }
                 else
                 {
