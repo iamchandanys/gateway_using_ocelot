@@ -13,7 +13,7 @@
 ##### Step 1 (ocelot.json):
 
 1. Add ocelot.json file in root folder.
-2. Add the below code in ocelot.json,
+2. Add the below json in ocelot.json,
 ```
 {
   "ReRoutes": [
@@ -54,7 +54,7 @@
 
 ##### Step 2 (appsettings.json):
 
-2. Add the below code in appsettings.json,
+2. Add the below json in appsettings.json,
 ```
 {
   "Logging": {
